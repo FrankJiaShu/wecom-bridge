@@ -39,8 +39,11 @@ import { parseArgs } from "node:util";
 import WebSocket from "ws";
 import { OmpBrain, safeName } from "./omp-brain.mjs";
 
+// 项目根目录（代码位于 src/，.env/logs/data/workspace 都在根）
+const ROOT = path.dirname(import.meta.dirname);
+
 // ---- .env 加载（进程 env 优先） ----
-const envFile = path.join(import.meta.dirname, ".env");
+const envFile = path.join(ROOT, ".env");
 if (fs.existsSync(envFile)) {
   for (const line of fs.readFileSync(envFile, "utf8").split(/\r?\n/)) {
     const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
@@ -76,7 +79,7 @@ const PORT = Number(cfg(argv["port"], process.env.BRIDGE_PORT, 8765));
 const WELCOME = cfg(argv["welcome"], process.env.WECOM_WELCOME_TEXT, "");
 const ECHO = cfg(argv["echo"], process.env.BRIDGE_ECHO, "0") === "1";
 const BRAIN = cfg(argv["brain"], process.env.BRIDGE_BRAIN, "") === "omp"; // omp 大脑（启用时优先于回声）
-const INBOX = path.resolve(cfg(argv["inbox"], process.env.INBOX_FILE, path.join(import.meta.dirname, "data", "inbox.jsonl")));
+const INBOX = path.resolve(cfg(argv["inbox"], process.env.INBOX_FILE, path.join(ROOT, "data", "inbox.jsonl")));
 try { fs.mkdirSync(path.dirname(INBOX), { recursive: true }); } catch { /* ignore */ }
 const PROFILE_DIR = path.resolve(cfg(argv["profile-dir"], process.env.OMP_PROFILE_DIR, path.join(os.homedir(), ".omp", "profiles", "wecombot", "agent")));
 const STARTED_AT = Date.now();
@@ -102,7 +105,7 @@ const DEVICE_ID = uuid().replace(/-/g, "");
 const mask = (s) => (s ? `${s.slice(0, 4)}…${s.slice(-2)}` : "(unset)");
 
 // ---- 日志：进程自持 fd，超限轮转 logs/bridge.log → logs/bridge.log.old（长稳运行防无限增长）----
-const LOG_DIR = path.join(import.meta.dirname, "logs");
+const LOG_DIR = path.join(ROOT, "logs");
 const BRIDGE_LOG = path.join(LOG_DIR, "bridge.log");
 const LOG_ROTATE_BYTES = Number(cfg(argv["log-max"], process.env.BRIDGE_LOG_MAX, 5 * 1024 * 1024));
 let logFd = null;
@@ -145,7 +148,7 @@ const pendingHandshake = { req_id: null, resolve: null };
 const pendingReplies = new Map(); // req_id -> resolve(fn)（respond/send 的 ack 关联）
 const dedup = new Map();          // msgid -> true，FIFO 有界
 const batches = new Map();        // chatKey -> 待合并事件
-const STOP_FLAG = path.join(import.meta.dirname, "bridge.stop");
+const STOP_FLAG = path.join(ROOT, "bridge.stop");
 const INBOX_ROTATE_BYTES = 20 * 1024 * 1024;
 const SESSION_MAX_AGE_MS = Number(cfg(argv["session-max-days"], process.env.SESSION_MAX_DAYS, 14)) * 86_400_000;
 
@@ -167,7 +170,7 @@ function appendInbox(record) {
 
 /** 会话清扫：目录内最新文件 mtime 超 SESSION_MAX_DAYS 的会话删除（omp 记忆清零） */
 function sweepStaleSessions() {
-  const root = path.join(import.meta.dirname, "workspace", "sessions");
+  const root = path.join(ROOT, "workspace", "sessions");
   let dirs = [];
   try { dirs = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()); } catch { return; }
   const now = Date.now();
@@ -503,7 +506,7 @@ sweepStaleSessions(); // brain 声明后首扫（函数内 if (brain) 判空，�
 setInterval(sweepStaleSessions, 6 * 3600_000);
 if (BRAIN) {
   brain = new OmpBrain({
-    workspace: cfg(argv["workspace"], undefined, path.join(import.meta.dirname, "workspace")),
+    workspace: cfg(argv["workspace"], undefined, path.join(ROOT, "workspace")),
     ompCmd: cfg(argv["omp-cmd"], process.env.OMP_CMD, "omp"),
     extraArgs: cfg(argv["omp-args"], process.env.OMP_ARGS, ""),
     approvalMode: cfg(argv["omp-approval"], process.env.OMP_APPROVAL_MODE, "yolo"),
@@ -555,7 +558,7 @@ function availableModels() {
 }
 
 function listSessions() {
-  const root = path.join(import.meta.dirname, "workspace", "sessions");
+  const root = path.join(ROOT, "workspace", "sessions");
   let dirs = [];
   try {
     dirs = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory());
@@ -628,7 +631,7 @@ const server = http.createServer((req, res) => {
   // ---- 控制面板页面 ----
   if (req.method === "GET" && (route === "/" || route === "/panel")) {
     try {
-      const html = fs.readFileSync(path.join(import.meta.dirname, "panel.html"));
+      const html = fs.readFileSync(path.join(ROOT, "public", "panel.html"));
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
       res.end(html);
     } catch (e) {
@@ -718,7 +721,7 @@ const server = http.createServer((req, res) => {
     readJsonBody(req).then((body) => {
       const ids = Array.isArray(body.ids) ? body.ids.filter((x) => /^[A-Za-z0-9_-]+$/.test(String(x))) : [];
       if (!ids.length) return json(400, { ok: false, error: "ids required" });
-      const root = path.join(import.meta.dirname, "workspace", "sessions");
+      const root = path.join(ROOT, "workspace", "sessions");
       const deleted = [], failed = [];
       for (const id of ids) {
         if (brain) for (const key of [...brain.chats.keys()]) if (safeName(key) === id) brain.killChatByKey(key);

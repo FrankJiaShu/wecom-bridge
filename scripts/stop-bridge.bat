@@ -1,4 +1,6 @@
 @echo off
+rem 脚本在 scripts/ 下，切到项目根
+cd /d "%~dp0.."
 set FOUND=0
 rem ---- tell the supervisor loop to exit (otherwise it would restart node) ----
 echo. > bridge.stop

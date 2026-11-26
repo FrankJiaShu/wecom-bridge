@@ -27,30 +27,37 @@ wecom-bridge.mjs（Node 常驻进程，127.0.0.1）
 
 ## 文件清单
 
-| 文件/目录 | 作用 |
-|---|---|
-| `wecom-bridge.mjs` | 桥接主程序：WSS 长连接 + 收发协议 + 本地 HTTP API + 控制面板 + 会话清扫 |
-| `omp-brain.mjs` | omp 大脑：每聊天一个 omp RPC 子进程，流式转发，自动注入群名/发送者上下文 |
-| `panel.html` | 控制面板页面（浏览器打开 http://127.0.0.1:8765/） |
-| `.env` | 配置（含 BotID/Secret，**勿提交到任何仓库**；可用命令行参数覆盖，见下文） |
-| `start-bridge.bat` | 双击启动（清停止标志 → 调用无窗口启动器） |
-| `stop-bridge.bat` | 双击停止：写 `bridge.stop` 标志 → 杀进程，守护循环见标志后一并退出 |
-| `run-hidden.vbs` | 无窗口启动器（由 start-bridge.bat 调用） |
-| `bridge-forever.cmd` | 守护循环：node 崩溃 5s 后自动重启；端口被占不重复拉起；见 `bridge.stop` 退出 |
-| `logs/` | 运行日志：`bridge.log`（>5MB 自动轮转 .old）、`bridge-crash.log`（守护/崩溃记录） |
-| `data/` | 运行数据：`inbox.jsonl`（收到的每条微信消息，>20MB 轮转 .old） |
-| `workspace/` | omp 子进程工作目录 + 每聊天会话存储（`sessions/<chatid>/`，**含隐私，勿外传**） |
-| `bridge.stop` | 停止标志文件（stop-bridge.bat / 面板停止写入，守护消费后自删） |
+```
+wecom-bridge/
+├─ src/                    后端
+│  ├─ wecom-bridge.mjs        桥接主程序：WSS 长连接 + 收发协议 + HTTP API + 控制面板 + 会话清扫
+│  └─ omp-brain.mjs           omp 大脑：每聊天一个 omp RPC 子进程，流式转发，群名/发送者上下文注入
+├─ public/
+│  └─ panel.html              控制面板前端（http://127.0.0.1:8765/）
+├─ scripts/                 启停脚本
+│  ├─ start-bridge.bat        启动（清停止标志 → 无窗口拉起守护）
+│  ├─ stop-bridge.bat         停止（写 bridge.stop 标志 + 杀进程，守护见标志一并退出）
+│  ├─ run-hidden.vbs          无窗口启动器（start-bridge.bat 调用）
+│  └─ bridge-forever.cmd      守护循环：崩溃 5s 自动重启；端口被占不重复拉起
+├─ logs/                   运行日志（gitignore）：bridge.log 超 5MB 轮转 .old、bridge-crash.log
+├─ data/                   运行数据（gitignore）：inbox.jsonl 超 20MB 轮转 .old
+├─ workspace/sessions/     每聊天 omp 会话存储（gitignore，含隐私勿外传）
+├─ .env                    凭证配置（gitignore，勿提交；CLI 参数可覆盖，见下文）
+├─ .env.example            配置模板
+├─ bridge.stop             停止标志（运行时生成，守护消费后自删）
+├─ package.json / package-lock.json
+└─ README.md
+```
 
 ## 快速开始
 
 ```bat
-:: 启动（双击 start-bridge.bat 也一样）：完全无窗口后台运行，不残留任何黑框
+:: 启动（双击 scripts\start-bridge.bat 也一样）：完全无窗口后台运行，不残留任何黑框
 cd /d D:\gdmp\wecom-bridge
-start-bridge.bat        :: 显示"Started OK"即可；重复双击会提示已在运行
+scripts\start-bridge.bat   :: 显示"Started OK"即可；重复执行会提示已在运行
 
 :: 停止（唯一停止方式；直接关窗口/任务管理器杀进程也行但不推荐）
-stop-bridge.bat
+scripts\stop-bridge.bat
 
 :: 控制面板（浏览器打开）
 start http://127.0.0.1:8765/
