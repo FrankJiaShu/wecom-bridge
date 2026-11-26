@@ -414,10 +414,12 @@ async function pollMessages() {
       return;
     }
     box.innerHTML = r.messages.map((m) => {
-      const t = (m.ts || "").replace("T", " ").slice(5, 19);
+      const d = m.ts ? new Date(m.ts) : null;
+      const pad = (x) => String(x).padStart(2, "0");
+      const t = d ? pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + [d.getHours(), d.getMinutes(), d.getSeconds()].map(pad).join(":") : "";
       const tag = m.chat_type === "group" ? "群" : "单";
       const who = (m.text || "").slice(0, 60);
-      return '<div class="log-row"><span class="log-time">' + esc(t) + '</span><span class="log-tag ' + esc(m.chat_type || "single") + '">' + tag + '</span><span class="log-text"><b>' + esc(who) + "</b></span></div>";
+      return '<div class="log-row"><span class="log-time" title="' + (d ? esc(d.toLocaleString("zh-CN", { hour12: false })) : "") + '">' + esc(t) + '</span><span class="log-tag ' + esc(m.chat_type || "single") + '">' + tag + '</span><span class="log-text"><b>' + esc(who) + "</b></span></div>";
     }).join("");
   } catch { /* 服务停止时静默 */ }
 }
