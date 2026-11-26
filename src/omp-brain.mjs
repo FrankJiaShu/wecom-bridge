@@ -44,6 +44,8 @@ export class OmpBrain {
     this.chats = new Map(); // chatKey -> chat state
     this.chatNames = new Map();        // chat_id -> {name, at}
     this.chatNameInflight = new Map(); // chat_id -> Promise
+    this.chatNameMapCache = null;      // {map: chat_id -> {name,type}, at}（sessions list 一次全量）
+    this.chatNameMapInflight = null;
     this.userNames = new Map();        // user_id -> {name, at}
     this.userNameInflight = new Map();
     fs.mkdirSync(path.join(workspace, "sessions"), { recursive: true });
@@ -259,6 +261,27 @@ export class OmpBrain {
         try { finish(JSON.parse(out.slice(s))); } catch { finish(null); }
       });
     });
+  }
+
+  /** chat_id → {name,type} 全量映射（一次 sessions list，TTL 缓存，面板/上下文共用） */
+  chatNameMap() {
+    if (this.chatNameMapCache && Date.now() - this.chatNameMapCache.at < CTX_TTL_MS) {
+      return Promise.resolve(this.chatNameMapCache.map);
+    }
+    if (this.chatNameMapInflight) return this.chatNameMapInflight;
+    this.chatNameMapInflight = this.runCli(["message", "aibot", "sessions", "list"]).then((j) => {
+      const map = {};
+      for (const s of Array.isArray(j?.sessions) ? j.sessions : []) {
+        if (s?.chat_id) map[s.chat_id] = { name: typeof s.chat_name === "string" ? s.chat_name.trim() : "", type: s.chat_type ?? "" };
+      }
+      this.chatNameMapCache = { map, at: Date.now() };
+      this.chatNameMapInflight = null;
+      return map;
+    }).catch(() => {
+      this.chatNameMapInflight = null;
+      return {};
+    });
+    return this.chatNameMapInflight;
   }
 
   /** chat_id → 群/会话名（wecom-cli message aibot sessions list，带 TTL 缓存与在途去重） */

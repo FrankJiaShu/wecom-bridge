@@ -121,6 +121,7 @@ select.dirty{border-color:var(--warn);box-shadow:0 0 0 3px rgba(255,180,84,.1)}
 .sess-row input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex:none}
 .sess-id{font-family:var(--mono);font-size:12px;color:var(--accent2);min-width:190px;flex:none}
 .sess-id .live{color:var(--ok);font-size:10px;margin-left:6px}
+.sess-id .tag{color:var(--muted);font-size:10px;border:1px solid var(--border);border-radius:3px;padding:0 3px;margin-left:6px}
 .sess-preview{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:13px}
 .sess-meta{font-family:var(--mono);font-size:11px;color:var(--text3);flex:none;text-align:right}
 .empty{padding:22px;text-align:center;color:var(--text3);font-size:13px;border:1px dashed var(--line);border-radius:9px}
@@ -352,9 +353,11 @@ function renderSessions(sessions) {
     const row = document.createElement("div");
     row.className = "sess-row" + (checked.has(s.id) ? " sel" : "");
     row.dataset.id = s.id;
+    const label = s.name || (s.chatType === "group" ? "未命名群聊" : (s.id.length > 14 ? s.id.slice(0, 14) + "…" : s.id));
+    const typeTag = s.chatType === "group" ? '<span class="tag">群</span>' : s.chatType === "single" ? '<span class="tag">单</span>' : "";
     row.innerHTML =
       '<input type="checkbox"' + (checked.has(s.id) ? " checked" : "") + '>' +
-      '<span class="sess-id">' + esc(s.id.slice(0, 22)) + (s.busy ? '<span class="live">● 活跃</span>' : "") + "</span>" +
+      '<span class="sess-id" title="' + esc(s.id) + '">' + esc(label) + typeTag + (s.busy ? '<span class="live">● 活跃</span>' : "") + "</span>" +
       '<span class="sess-preview" title="' + esc(s.preview) + '">' + (esc(s.preview) || "<i>（无文本预览）</i>") + "</span>" +
       '<span class="sess-meta">' + (s.bytes / 1024).toFixed(1) + " KB<br>" + relTime(s.mtime) + "</span>";
     row.addEventListener("click", (e) => {

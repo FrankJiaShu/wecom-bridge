@@ -557,6 +557,19 @@ function availableModels() {
   return out;
 }
 
+/** 会话列表附加可读名称：群名/对方姓名 + 会话类型（3s 预算，失败降级为空名） */
+async function enrichSessions(sessions) {
+  const names = await Promise.race([
+    brain?.chatNameMap?.() ?? Promise.resolve({}),
+    new Promise((r) => setTimeout(() => r({}), 3000)),
+  ]).catch(() => ({}));
+  return sessions.map((s) => ({
+    ...s,
+    name: names[s.id]?.name ?? "",
+    chatType: names[s.id]?.type ?? "",
+  }));
+}
+
 function listSessions() {
   const root = path.join(ROOT, "workspace", "sessions");
   let dirs = [];
@@ -621,7 +634,7 @@ function readJsonBody(req, limit = 1_000_000) {
 }
 
 // ---- 本地 HTTP API（仅 127.0.0.1） ----
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const json = (code, obj) => {
     res.writeHead(code, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(obj));
@@ -675,7 +688,7 @@ const server = http.createServer((req, res) => {
         busy: [...c.turns.values()].some((t) => !t.finished),
         last_used: new Date(c.lastUsed).toISOString(),
       })) : [],
-      sessions: listSessions(),
+      sessions: await enrichSessions(listSessions()),
     });
   }
   if (req.method === "GET" && route === "/api/messages") {
