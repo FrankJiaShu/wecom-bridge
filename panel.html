@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>wecom-bridge 控制台</title>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%2316233a"/><rect x="12" y="12" width="16" height="16" rx="3" fill="%234d9fff"/><rect x="36" y="36" width="16" height="16" rx="3" fill="%234d9fff"/><rect x="36" y="12" width="16" height="16" rx="3" fill="%232b5da8"/><rect x="12" y="36" width="16" height="16" rx="3" fill="%232b5da8"/></svg>'>
+<style>
+:root{
+  --bg:#0c0f15; --bg2:#10141d;
+  --panel:#141926; --panel2:#182030; --panel3:#1e2839;
+  --line:#232d40; --line2:#2f3c55;
+  --text:#e9edf5; --text2:#98a4bc; --text3:#5d6a85;
+  --accent:#4d9fff; --accent-dim:#2b5da8;
+  --ok:#38d980; --warn:#ffb454; --err:#ff5f5f;
+  --mono:"JetBrains Mono","Cascadia Code",Consolas,"Courier New",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--sans);color:var(--text);background:var(--bg);
+  background-image:
+    radial-gradient(900px 420px at 12% -8%,rgba(77,159,255,.09),transparent 60%),
+    repeating-linear-gradient(0deg,transparent 0 39px,rgba(255,255,255,.015) 39px 40px),
+    repeating-linear-gradient(90deg,transparent 0 39px,rgba(255,255,255,.015) 39px 40px);
+  min-height:100vh;font-size:14px;line-height:1.55;
+}
+.wrap{max-width:1060px;margin:0 auto;padding:28px 20px 60px}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px}
+.glyph{
+  width:44px;height:44px;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(145deg,var(--accent-dim),#16233a);
+  border:1px solid var(--line2);color:var(--accent);font-family:var(--mono);font-size:20px;
+  box-shadow:0 0 24px rgba(77,159,255,.18);
+}
+.brand h1{font-size:19px;font-weight:650;letter-spacing:.4px;font-family:var(--mono)}
+.brand p{font-size:12px;color:var(--text3);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
+.cluster{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.ledbox{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2)}
+.led{width:8px;height:8px;border-radius:50%;background:var(--err);box-shadow:0 0 0 3px rgba(255,95,95,.12)}
+.led.ok{background:var(--ok);box-shadow:0 0 0 3px rgba(56,217,128,.14);animation:pulse 2.4s infinite}
+.led.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(255,180,84,.14)}
+.led.err{background:var(--err);box-shadow:0 0 0 3px rgba(255,95,95,.12)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.uptime{font-family:var(--mono);font-size:12px;color:var(--text3);border:1px solid var(--line);border-radius:6px;padding:4px 10px;background:var(--bg2)}
+.chat-chip{
+  display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);
+  border-radius:999px;padding:3px 6px 3px 12px;background:var(--bg2);font-size:11px;
+}
+.chat-chip .mono{font-family:var(--mono);color:var(--text2)}
+.chat-chip .busy{color:var(--warn)}
+.chat-chip .idle{color:var(--text3)}
+#chat-chip.chips{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- cards ---------- */
+main{display:grid;gap:16px}
+.card{
+  background:linear-gradient(180deg,var(--panel),var(--bg2));
+  border:1px solid var(--line);border-radius:12px;padding:18px 20px;
+  opacity:0;transform:translateY(8px);animation:rise .45s ease forwards;
+}
+.card:nth-child(2){animation-delay:.08s}
+.card:nth-child(3){animation-delay:.16s}
+@keyframes rise{to{opacity:1;transform:none}}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.card-head h2{font-size:11px;font-weight:600;letter-spacing:.22em;color:var(--text2);text-transform:uppercase}
+.card-head .chip{font-family:var(--mono);font-size:11px;color:var(--accent);border:1px solid var(--line2);border-radius:999px;padding:1px 9px;background:rgba(77,159,255,.07)}
+.card-head .spacer{flex:1}
+
+/* ---------- controls ---------- */
+.ctl-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.field label{display:block;font-size:11px;letter-spacing:.14em;color:var(--text3);text-transform:uppercase;margin-bottom:6px}
+select{
+  width:100%;appearance:none;background:var(--panel2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2398a4bc' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
+  border:1px solid var(--line2);border-radius:8px;color:var(--text);
+  font-family:var(--mono);font-size:13px;padding:9px 32px 9px 12px;outline:none;cursor:pointer;
+  transition:border-color .15s;
+}
+select:hover{border-color:var(--accent-dim)}
+select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(77,159,255,.12)}
+select.dirty{border-color:var(--warn);box-shadow:0 0 0 3px rgba(255,180,84,.1)}
+.ctl-actions{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.hint{font-size:12px;color:var(--text3)}
+.danger-row{display:flex;align-items:center;gap:12px;border-top:1px dashed var(--line);padding-top:14px}
+
+/* ---------- buttons ---------- */
+.btn{
+  border:1px solid var(--line2);background:var(--panel3);color:var(--text);
+  border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:var(--sans);
+  transition:all .15s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--accent-dim);background:#233050}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#06101f;font-weight:600}
+.btn.primary:hover{background:#6cb1ff}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn.danger{color:var(--err);border-color:rgba(255,95,95,.35);background:rgba(255,95,95,.05)}
+.btn.danger:hover{background:rgba(255,95,95,.14);border-color:var(--err)}
+.btn.danger.arm{background:var(--err);color:#1b0808;border-color:var(--err);font-weight:600}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--text2)}
+.btn.ghost:hover{color:var(--accent);border-color:var(--line2)}
+.btn.sm{padding:5px 12px;font-size:12px}
+
+/* ---------- sessions ---------- */
+.batch-bar{
+  display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:8px 12px;
+  border:1px solid rgba(255,95,95,.3);background:rgba(255,95,95,.06);border-radius:8px;
+  font-size:12px;color:var(--text2);
+}
+.batch-bar[hidden]{display:none}
+.sess-list{display:flex;flex-direction:column;gap:6px}
+.sess-row{
+  display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--line);
+  border-radius:9px;background:var(--panel2);cursor:pointer;transition:border-color .15s,background .15s;
+}
+.sess-row:hover{border-color:var(--line2);background:var(--panel3)}
+.sess-row.sel{border-color:var(--accent-dim);background:rgba(77,159,255,.06)}
+.sess-row input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex:none}
+.sess-id{font-family:var(--mono);font-size:12px;color:var(--accent2);min-width:190px;flex:none}
+.sess-id .live{color:var(--ok);font-size:10px;margin-left:6px}
+.sess-preview{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:13px}
+.sess-meta{font-family:var(--mono);font-size:11px;color:var(--text3);flex:none;text-align:right}
+.empty{padding:22px;text-align:center;color:var(--text3);font-size:13px;border:1px dashed var(--line);border-radius:9px}
+
+/* ---------- log ---------- */
+.log{display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto;padding-right:4px}
+.log::-webkit-scrollbar{width:8px}
+.log::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+.log-row{
+  display:flex;gap:10px;font-family:var(--mono);font-size:12px;padding:6px 10px;
+  border-radius:6px;background:rgba(255,255,255,.015);border:1px solid transparent;
+}
+.log-row:hover{border-color:var(--line)}
+.log-time{color:var(--text3);flex:none}
+.log-tag{flex:none;width:34px;text-align:center;border-radius:4px;font-size:10px;padding:1px 0}
+.log-tag.group{color:#c9a3ff;background:rgba(201,163,255,.1)}
+.log-tag.single{color:#7dd3fc;background:rgba(125,211,252,.1)}
+.log-text{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-text b{color:var(--text);font-weight:500}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;right:20px;bottom:20px;z-index:50;display:flex;flex-direction:column;gap:8px;
+}
+.toast .t{
+  background:var(--panel3);border:1px solid var(--line2);border-left:3px solid var(--accent);
+  color:var(--text);padding:10px 16px;border-radius:8px;font-size:13px;
+  box-shadow:0 8px 30px rgba(0,0,0,.5);animation:rise .3s ease;max-width:340px;
+}
+.toast .t.err{border-left-color:var(--err)}
+
+/* ---------- overlay ---------- */
+.overlay{
+  position:fixed;inset:0;z-index:40;background:rgba(5,8,14,.72);backdrop-filter:blur(4px);
+  display:grid;place-items:center;
+}
+.overlay[hidden]{display:none}
+.dialog{
+  width:min(420px,92vw);background:var(--panel);border:1px solid var(--line2);border-radius:14px;
+  padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.6);animation:rise .25s ease;
+}
+.dialog h3{font-size:16px;margin-bottom:10px}
+.dialog p{font-size:13px;color:var(--text2);margin-bottom:18px}
+.dialog .row{display:flex;justify-content:flex-end;gap:10px}
+.stopped-box{text-align:center}
+.stopped-box .big{font-size:42px;margin-bottom:12px}
+.stopped-box p{color:var(--text2);font-size:13px;line-height:1.8}
+.stopped-box code{font-family:var(--mono);color:var(--accent2);background:rgba(77,159,255,.08);padding:2px 6px;border-radius:4px}
+
+@media (max-width:760px){
+  .ctl-grid{grid-template-columns:1fr}
+  .sess-id{min-width:120px}
+  .uptime{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="glyph">▚▞</div>
+      <div>
+        <h1>wecom-bridge</h1>
+        <p>企业微信 ↔ omp 运行控制台</p>
+      </div>
+    </div>
+    <div class="cluster">
+      <div class="ledbox"><span class="led err" id="led-ws"></span>长连接</div>
+      <div class="ledbox"><span class="led err" id="led-brain"></span>大脑</div>
+      <div class="uptime" id="uptime">--:--:--</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 运行控制 -->
+    <section class="card">
+      <div class="card-head"><h2>运行控制</h2><span class="chip" id="bot-chip">--</span><div class="spacer"></div><span class="hint" id="chat-chip"></span></div>
+      <div class="ctl-grid">
+        <div class="field">
+          <label>模型</label>
+          <select id="model"></select>
+        </div>
+        <div class="field">
+          <label>思考强度</label>
+          <select id="thinking"></select>
+        </div>
+      </div>
+      <div class="ctl-actions">
+        <button class="btn primary" id="apply" disabled>应用并热更新</button>
+        <span class="hint">写入 profile 后自动回收聊天子进程，下一条微信消息即用新配置（进行中的回合静默终止）</span>
+      </div>
+      <div class="danger-row">
+        <button class="btn danger" id="stop">停止服务</button>
+        <span class="hint">机器人将下线；重新启动需双击 start-bridge.bat</span>
+      </div>
+    </section>
+
+    <!-- 会话 -->
+    <section class="card">
+      <div class="card-head">
+        <h2>会话 sessions</h2><span class="chip" id="sess-n">0</span>
+        <div class="spacer"></div>
+        <button class="btn ghost sm" id="refresh">刷新</button>
+      </div>
+      <div class="batch-bar" id="batch-bar" hidden>
+        已选 <b id="sel-n">0</b> 个会话
+        <button class="btn danger sm" id="del">删除所选</button>
+        <span class="hint">删除 = 清空该聊天的 omp 记忆，下次消息重新开始</span>
+      </div>
+      <div class="sess-list" id="sessions"><div class="empty">加载中…</div></div>
+    </section>
+
+    <!-- 消息流 -->
+    <section class="card">
+      <div class="card-head"><h2>消息流 inbox</h2><span class="chip" id="msg-n">0</span><div class="spacer"></div><span class="hint">最近 100 条 · 新消息在上</span></div>
+      <div class="log" id="log"><div class="empty">加载中…</div></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="dialog" id="dialog"></div>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+let server = { model: "", thinking: "" };   // 服务端当前生效值
+let pending = {};                            // 面板上未应用的改动
+let stopped = false;
+
+/* ---------- 工具 ---------- */
+async function api(path, body) {
+  const opt = body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {};
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(msg, err) {
+  const t = document.createElement("div");
+  t.className = "t" + (err ? " err" : "");
+  t.textContent = msg;
+  $("toast").appendChild(t);
+  setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity .4s"; setTimeout(() => t.remove(), 450); }, 2600);
+}
+function relTime(ts) {
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 60) return Math.round(s) + "秒前";
+  if (s < 3600) return Math.round(s / 60) + "分钟前";
+  if (s < 86400) return Math.round(s / 3600) + "小时前";
+  return Math.round(s / 86400) + "天前";
+}
+function fmtUptime(ms) {
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  return (d ? d + "d " : "") + String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+}
+
+/* ---------- 状态轮询 ---------- */
+async function poll() {
+  if (stopped) return;
+  try {
+    const st = await api("/api/status");
+    server = { model: st.model, thinking: st.thinking };
+    // LED
+    const wsLed = $("led-ws");
+    wsLed.className = "led " + (st.subscribed ? "ok" : st.ws_open ? "warn" : "err");
+    const bLed = $("led-brain");
+    bLed.className = "led " + (st.brain && st.subscribed ? "ok" : "err");
+    $("uptime").textContent = fmtUptime(st.uptime_ms);
+    $("bot-chip").textContent = "bot " + st.bot_id;
+    const cc = $("chat-chip");
+    if (!st.chats.length) {
+      cc.textContent = "无活跃聊天进程";
+    } else {
+      cc.textContent = "";
+      cc.classList.add("chips");
+      for (const c of st.chats) {
+        const chip = document.createElement("span");
+        chip.className = "chat-chip";
+        chip.innerHTML =
+          '<span class="mono">' + esc(c.chat_id.slice(0, 14)) + "…</span>" +
+          '<span class="' + (c.busy ? "busy" : "idle") + '">' + (c.busy ? "● 回答中" : "空闲") + "</span>" +
+          '<button class="btn danger sm" data-chat="' + esc(c.chat_id) + '">终止</button>';
+        cc.appendChild(chip);
+      }
+    }
+    // 下拉（仅在无未应用改动时跟随服务端）
+    fillSelect($("model"), st.models, st.model);
+    fillSelect($("thinking"), st.thinking_levels, st.thinking);
+    renderSessions(st.sessions);
+    $("sess-n").textContent = st.sessions.length;
+  } catch {
+    // 服务不可达：面板自身也随之失效
+    $("led-ws").className = "led err";
+    $("led-brain").className = "led err";
+  }
+  setTimeout(poll, 3000);
+}
+function fillSelect(sel, options, current) {
+  const wanted = pending[sel.id] !== undefined ? pending[sel.id] : current;
+  sel.innerHTML = "";
+  for (const o of options) {
+    const opt = document.createElement("option");
+    opt.value = o;
+    opt.textContent = o;
+    sel.appendChild(opt);
+  }
+  sel.value = options.includes(wanted) ? wanted : current;
+  sel.classList.toggle("dirty", sel.value !== current);
+}
+
+/* ---------- 会话 ---------- */
+const checked = new Set();
+function renderSessions(sessions) {
+  const box = $("sessions");
+  [...checked].forEach((id) => { if (!sessions.some((s) => s.id === id)) checked.delete(id); });
+  if (!sessions.length) {
+    box.innerHTML = '<div class="empty">还没有会话——在微信里 @机器人 说句话就会产生</div>';
+    updateBatch();
+    return;
+  }
+  box.innerHTML = "";
+  for (const s of sessions) {
+    const row = document.createElement("div");
+    row.className = "sess-row" + (checked.has(s.id) ? " sel" : "");
+    row.dataset.id = s.id;
+    row.innerHTML =
+      '<input type="checkbox"' + (checked.has(s.id) ? " checked" : "") + '>' +
+      '<span class="sess-id">' + esc(s.id.slice(0, 22)) + (s.busy ? '<span class="live">● 活跃</span>' : "") + "</span>" +
+      '<span class="sess-preview" title="' + esc(s.preview) + '">' + (esc(s.preview) || "<i>（无文本预览）</i>") + "</span>" +
+      '<span class="sess-meta">' + (s.bytes / 1024).toFixed(1) + " KB<br>" + relTime(s.mtime) + "</span>";
+    row.addEventListener("click", (e) => {
+      if (e.target.tagName === "INPUT") return;
+      const cb = row.querySelector("input");
+      cb.checked = !cb.checked;
+      toggle(cb);
+    });
+    row.querySelector("input").addEventListener("change", (e) => toggle(e.target));
+    box.appendChild(row);
+  }
+  updateBatch();
+}
+function toggle(cb) {
+  const row = cb.closest(".sess-row");
+  const id = row.dataset.id;
+  cb.checked ? checked.add(id) : checked.delete(id);
+  row.classList.toggle("sel", cb.checked);
+  updateBatch();
+}
+function updateBatch() {
+  $("sel-n").textContent = checked.size;
+  $("batch-bar").hidden = checked.size === 0;
+  const del = $("del");
+  del.classList.remove("arm");
+  del.textContent = "删除所选";
+  del.dataset.arm = "";
+}
+$("del").addEventListener("click", async () => {
+  const del = $("del");
+  if (del.dataset.arm !== "1") {
+    del.dataset.arm = "1";
+    del.classList.add("arm");
+    del.textContent = "确认删除 " + checked.size + " 个？不可恢复";
+    return;
+  }
+  try {
+    const r = await api("/api/sessions/delete", { ids: [...checked] });
+    checked.clear();
+    toast("已删除 " + r.deleted.length + " 个会话" + (r.failed.length ? "，" + r.failed.length + " 个失败" : ""), r.failed.length > 0);
+    poll();
+  } catch (e) { toast("删除失败：" + e.message, true); }
+});
+
+/* ---------- 消息流 ---------- */
+async function pollMessages() {
+  if (stopped) return;
+  try {
+    const r = await api("/api/messages");
+    const box = $("log");
+    $("msg-n").textContent = r.messages.length;
+    if (!r.messages.length) {
+      box.innerHTML = '<div class="empty">还没有收到微信消息</div>';
+      return;
+    }
+    box.innerHTML = r.messages.map((m) => {
+      const t = (m.ts || "").replace("T", " ").slice(5, 19);
+      const tag = m.chat_type === "group" ? "群" : "单";
+      const who = (m.text || "").slice(0, 60);
+      return '<div class="log-row"><span class="log-time">' + esc(t) + '</span><span class="log-tag ' + esc(m.chat_type || "single") + '">' + tag + '</span><span class="log-text"><b>' + esc(who) + "</b></span></div>";
+    }).join("");
+  } catch { /* 服务停止时静默 */ }
+}
+
+/* ---------- 控制动作 ---------- */
+function markDirty() {
+  $("model").classList.toggle("dirty", $("model").value !== server.model);
+  $("thinking").classList.toggle("dirty", $("thinking").value !== server.thinking);
+  const dirty = $("model").classList.contains("dirty") || $("thinking").classList.contains("dirty");
+  $("apply").disabled = !dirty;
+}
+$("model").addEventListener("change", () => { pending.model = $("model").value; markDirty(); });
+$("thinking").addEventListener("change", () => { pending.thinking = $("thinking").value; markDirty(); });
+$("apply").addEventListener("click", async () => {
+  const btn = $("apply");
+  btn.disabled = true; btn.textContent = "应用中…";
+  try {
+    const tasks = [];
+    if ($("model").value !== server.model) tasks.push(api("/api/model", { model: $("model").value }));
+    if ($("thinking").value !== server.thinking) tasks.push(api("/api/thinking", { level: $("thinking").value }));
+    await Promise.all(tasks);
+    pending = {};
+    toast("已应用，聊天子进程已热更新");
+    poll();
+  } catch (e) { toast("应用失败：" + e.message, true); }
+  btn.textContent = "应用并热更新";
+  markDirty();
+});
+$("refresh").addEventListener("click", () => { poll(); pollMessages(); toast("已刷新"); });
+$("chat-chip").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-chat]");
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = "终止中…";
+  try {
+    const r = await api("/api/abort", { chat_id: btn.dataset.chat });
+    toast(r.ok ? "已发送终止指令，回合即将中断" : "该聊天没有进行中的回合");
+  } catch (e2) { toast("终止失败：" + e2.message, true); }
+  setTimeout(poll, 800);
+});
+
+/* ---------- 停止流程 ---------- */
+function dialog(html) { $("dialog").innerHTML = html; $("overlay").hidden = false; }
+function closeDialog() { $("overlay").hidden = true; }
+$("stop").addEventListener("click", () => {
+  dialog(
+    '<h3>停止 wecom-bridge？</h3>' +
+    "<p>机器人将立即从企业微信下线，所有聊天子进程终止。<br>重新启动需双击 <b>start-bridge.bat</b>。</p>" +
+    '<div class="row"><button class="btn" id="cxl">取消</button><button class="btn danger" id="ok">确认停止</button></div>'
+  );
+  $("cxl").onclick = closeDialog;
+  $("ok").onclick = async () => {
+    $("ok").disabled = true; $("ok").textContent = "停止中…";
+    try { await api("/api/stop", {}); } catch { /* 进程已退出，fetch 失败属预期 */ }
+    stopped = true;
+    dialog(
+      '<div class="stopped-box"><div class="big">⏻</div><h3>服务已停止</h3>' +
+      "<p>机器人已从企业微信下线。<br>重新启动：双击 <code>start-bridge.bat</code><br>然后刷新本页面。</p>" +
+      '<div class="row" style="justify-content:center;margin-top:16px"><button class="btn" onclick="location.reload()">我已重启，刷新面板</button></div></div>'
+    );
+  };
+});
+$("overlay").addEventListener("click", (e) => { if (e.target === $("overlay") && !$("ok")?.disabled) closeDialog(); });
+
+function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+/* ---------- 启动 ---------- */
+poll();
+pollMessages();
+setInterval(pollMessages, 5000);
+</script>
+</body>
+</html>
